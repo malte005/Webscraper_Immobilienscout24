@@ -12,4 +12,4 @@ url_wg_zimmer_mieten = "https://www.immobilienscout24.de/Suche/S-T/WG-Zimmer/Ber
 
 
 wohnungMieten.scrapeResultPage(url_wohnung_mieten)
-
+wohnungMieten.generateDataFrame()

@@ -1,5 +1,21 @@
 import requests
+import pandas as pd
+import time
+import datetime
 from bs4 import BeautifulSoup
+
+wohnunstyp_arr = []
+kaltmiete_arr = []
+nebenkosten_arr = []
+kautionOderGenoss_arr = []
+anzahl_zimmer_arr = []
+flaeche_arr = []
+baujahr_arr = []
+straßeHausNr_arr = []
+plz_arr = []
+stadt_arr = []
+ortsteil_arr = []
+bezirk_arr = []
 
 
 def getNumOfPages(soup):
@@ -33,8 +49,10 @@ def scrapeResultPage(url_base_result_page):
         ## get list of all items of the result page (ads)
         ulResultList = result_page_soup.find(id="resultListItems")
 
-        ## find all items of result list
-        ads = ulResultList.find_all(class_="result-list__listing result-list__listing--xl")
+        ## find all items of result list excluding th hidden duplicates
+        ads = ulResultList.find_all(
+            lambda tag: tag.name == 'li' and tag.get('class') == ['result-list__listing'] and tag.get('class') != [
+                'result-list__listing--hidden'])
 
         ## loop through all items of a resultPage and call method to scrape each items detail website
         for index, item in enumerate(ads):
@@ -44,7 +62,8 @@ def scrapeResultPage(url_base_result_page):
 
 ## drive into the detail page
 def scrapeSubPage(item):
-    notAvailable = "n.a."
+    notAvailable = ""
+
     ## get item ID
     item_id = item['data-id']
     url_detail_page = "https://www.immobilienscout24.de/expose/" + str(item_id)
@@ -66,12 +85,19 @@ def scrapeSubPage(item):
         wohnunstyp = notAvailable
 
     if item_soup.find("dd", {"class": "is24qa-kaltmiete"}):
-        kaltmiete = item_soup.find(class_="is24qa-kaltmiete").get_text().strip()
+        kaltmiete = item_soup.find(class_="is24qa-kaltmiete").get_text().split()[0].strip()
     else:
         kaltmiete = notAvailable
 
     if item_soup.find("dd", {"class": "is24qa-nebenkosten"}):
-        nebenkosten = item_soup.find(class_="is24qa-nebenkosten").get_text().strip()
+        dd = item_soup.find("dd", {"class": "is24qa-nebenkosten"})
+        span = dd.find("span")
+        _ = span.extract()
+
+        try:
+            nebenkosten = item_soup.find(class_="is24qa-nebenkosten").get_text().split()[0].strip()
+        except IndexError:
+            nebenkosten = notAvailable
     else:
         nebenkosten = notAvailable
 
@@ -86,7 +112,7 @@ def scrapeSubPage(item):
         anzahl_zimmer = notAvailable
 
     if item_soup.find("dd", {"class": "is24qa-wohnflaeche-ca"}):
-        flaeche = item_soup.find(class_="is24qa-wohnflaeche-ca").get_text().strip()
+        flaeche = item_soup.find(class_="is24qa-wohnflaeche-ca").get_text().split()[0].strip()
     else:
         flaeche = notAvailable
 
@@ -109,7 +135,7 @@ def scrapeSubPage(item):
             ortsteil = notAvailable
         try:
             temp = item_soup.find(class_="zip-region-and-country").get_text().strip()
-            bezirk = temp[temp.find("(")+1:temp.find(")")]
+            bezirk = temp[temp.find("(") + 1:temp.find(")")]
         except IndexError:
             bezirk = notAvailable
     else:
@@ -118,15 +144,61 @@ def scrapeSubPage(item):
         ortsteil = notAvailable
         bezirk = notAvailable
 
-    print("\t" + wohnunstyp)
-    print("\t" + kaltmiete)
-    print("\t" + nebenkosten)
-    print("\t" + kautionOderGenoss)
-    print("\t" + anzahl_zimmer)
-    print("\t" + flaeche)
-    print("\t" + baujahr)
-    print("\t" + straßeHausNr)
-    print("\t" + plz)
-    print("\t" + stadt)
-    print("\t" + ortsteil)
-    print("\t" + bezirk)
+    # fill global vars
+    global wohnunstyp_arr
+    wohnunstyp_arr.append(wohnunstyp)
+    global kaltmiete_arr
+    kaltmiete_arr.append(kaltmiete)
+    global nebenkosten_arr
+    nebenkosten_arr.append(nebenkosten)
+    global kautionOderGenoss_arr
+    kautionOderGenoss_arr.append(kautionOderGenoss)
+    global anzahl_zimmer_arr
+    anzahl_zimmer_arr.append(anzahl_zimmer)
+    global flaeche_arr
+    flaeche_arr.append(flaeche)
+    global baujahr_arr
+    baujahr_arr.append(baujahr)
+    global straßeHausNr_arr
+    straßeHausNr_arr.append(straßeHausNr)
+    global plz_arr
+    plz_arr.append(plz)
+    global stadt_arr
+    stadt_arr.append(stadt)
+    global ortsteil_arr
+    ortsteil_arr.append(ortsteil)
+    global bezirk_arr
+    bezirk_arr.append(bezirk)
+
+
+# use pandas to create dataFrame and export it to xlsx
+def generateDataFrame():
+    apartments = pd.DataFrame({
+        "wohnunstyp": wohnunstyp_arr
+        ,"kaltmiete (in €)": kaltmiete_arr
+        ,"nebenkosten (in €)": nebenkosten_arr
+        ,"kautionOderGenoss": kautionOderGenoss_arr
+        ,"anzahl_zimmer": anzahl_zimmer_arr
+        ,"flaeche (in m²)": flaeche_arr
+        ,"baujahr": baujahr_arr
+        ,"straßeHausNr": straßeHausNr_arr
+        ,"plz": plz_arr
+        ,"stadt": stadt_arr
+        ,"ortsteil": ortsteil_arr
+        ,"bezirk": bezirk_arr
+    })
+
+    # apartments["warmmiete"] = apartments['kaltmiete (in €)'].str.replace(".", "").str.replace(",", ".").astype(float) + apartments['nebenkosten (in €)'].str.replace(".", "").str.replace(",", ".").astype(float)
+
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H-%M-%S')
+    filename = str(st)+' immo.xlsx'
+    engine = 'xlsxwriter'
+
+    writer = pd.ExcelWriter(filename, engine=engine)
+
+    # Convert the dataframe to an XlsxWriter Excel object.
+    apartments.to_excel(writer, sheet_name='Report')
+
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.save()
