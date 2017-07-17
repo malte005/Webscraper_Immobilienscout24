@@ -1,8 +1,9 @@
-import requests
-import pandas as pd
+import beautifulsoupHelper
 import time
 import datetime
-from bs4 import BeautifulSoup
+import pandas as pd
+
+notAvailable = ""
 
 wohnunstyp_arr = []
 kaltmiete_arr = []
@@ -18,24 +19,13 @@ ortsteil_arr = []
 bezirk_arr = []
 
 
-def getNumOfPages(soup):
-    return len(soup.find_all("option"))
-
-
-## return BS object
-def configBS(url):
-    ## download website
-    page = requests.get(url)
-    return BeautifulSoup(page.content, "html.parser")
-
-
 ## drive through all result pages
 def scrapeResultPage(url_base_result_page):
     ## get base result page as BS object
-    base_result_page_soup = configBS(url_base_result_page)
+    base_result_page_soup = beautifulsoupHelper.configBS(url_base_result_page)
 
     ## get number of sub pages
-    num_pages = getNumOfPages(base_result_page_soup)
+    num_pages = beautifulsoupHelper.getNumOfPages(base_result_page_soup)
     print("Anzahl an Ergebnisseiten: " + str(num_pages) + "\n------------------------------------\n")
 
     ## go through all result pages
@@ -43,7 +33,7 @@ def scrapeResultPage(url_base_result_page):
         print(str(subPage) + ". Ergebnisseite scrapen...")
         print("https://www.immobilienscout24.de/Suche/S-T/P-" + str(subPage) + "/Wohnung-Miete/Berlin/Berlin\n")
         ## get each result page as BS object
-        result_page_soup = configBS(
+        result_page_soup = beautifulsoupHelper.configBS(
             "https://www.immobilienscout24.de/Suche/S-T/P-" + str(subPage) + "/Wohnung-Miete/Berlin/Berlin")
 
         ## get list of all items of the result page (ads)
@@ -62,14 +52,12 @@ def scrapeResultPage(url_base_result_page):
 
 ## drive into the detail page
 def scrapeSubPage(item):
-    notAvailable = ""
-
     ## get item ID
     item_id = item['data-id']
     url_detail_page = "https://www.immobilienscout24.de/expose/" + str(item_id)
 
     ## init BS
-    item_soup = configBS(url_detail_page)
+    item_soup = beautifulsoupHelper.configBS(url_detail_page)
 
     ##get html parent
     item_html = list(item_soup.children)[2]
@@ -172,33 +160,33 @@ def scrapeSubPage(item):
 
 
 # use pandas to create dataFrame and export it to xlsx
-def generateDataFrame():
+def generateDataFrame(filename):
     apartments = pd.DataFrame({
-        "wohnunstyp": wohnunstyp_arr
-        ,"kaltmiete (in €)": kaltmiete_arr
-        ,"nebenkosten (in €)": nebenkosten_arr
-        ,"kautionOderGenoss": kautionOderGenoss_arr
-        ,"anzahl_zimmer": anzahl_zimmer_arr
-        ,"flaeche (in m²)": flaeche_arr
-        ,"baujahr": baujahr_arr
-        ,"straßeHausNr": straßeHausNr_arr
-        ,"plz": plz_arr
-        ,"stadt": stadt_arr
-        ,"ortsteil": ortsteil_arr
-        ,"bezirk": bezirk_arr
+        "Wohnunstyp": wohnunstyp_arr
+        , "Kaltmiete (in €)": kaltmiete_arr
+        , "Nebenkosten (in €)": nebenkosten_arr
+        , "KautionOderGenoss": kautionOderGenoss_arr
+        , "Anzahl_zimmer": anzahl_zimmer_arr
+        , "Flaeche (in m²)": flaeche_arr
+        , "Baujahr": baujahr_arr
+        , "StraßeHausNr": straßeHausNr_arr
+        , "PLZ": plz_arr
+        , "Stadt": stadt_arr
+        , "Ortsteil": ortsteil_arr
+        , "Bezirk": bezirk_arr
     })
 
     # apartments["warmmiete"] = apartments['kaltmiete (in €)'].str.replace(".", "").str.replace(",", ".").astype(float) + apartments['nebenkosten (in €)'].str.replace(".", "").str.replace(",", ".").astype(float)
 
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H-%M-%S')
-    filename = str(st)+' immo.xlsx'
+    file = str(st) + ' ' + filename + '.xlsx'
     engine = 'xlsxwriter'
 
-    writer = pd.ExcelWriter(filename, engine=engine)
+    writer = pd.ExcelWriter(file, engine=engine)
 
     # Convert the dataframe to an XlsxWriter Excel object.
-    apartments.to_excel(writer, sheet_name='Report')
+    apartments.to_excel(writer, sheet_name=filename)
 
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()

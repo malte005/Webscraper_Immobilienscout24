@@ -1,15 +1,21 @@
-import wohnungMieten
+import wohnungsAngebote as wA
 
-## base urls
+# import wohnungsGesuche as wG
+
+# global variables
+immo = "ImmoScout24"
+wg = "WG-Gesucht"
+
+# base urls ImmobilienScout24 for offers
 url_wohnung_mieten = "https://www.immobilienscout24.de/Suche/S-T/Wohnung-Miete/Berlin/Berlin"
-url_wohnung_kaufen = "https://www.immobilienscout24.de/Suche/S-T/Wohnung-Kauf/Berlin/Berlin"
-url_wohnung_mieten_archiv = "https://www.immobilienscout24.de/Suche/S-T/Wohnung-Miete/archiv/Berlin/Berlin"
-url_wohnung_kaufen_archiv = "https://www.immobilienscout24.de/Suche/S-T/Wohnung-Kauf/archiv/Berlin/Berlin"
 
+# base urls WG-Gesucht for appartment demands
+url_wgGesucht_wohnungsGesuche = "www.wg-gesucht.de/wohnungen-in-Berlin-gesucht.8.2.1.0.html"
 
-# url for shared flat offers
-url_wg_zimmer_mieten = "https://www.immobilienscout24.de/Suche/S-T/WG-Zimmer/Berlin/Berlin"
+# Scrape ImmobilienScout24 for offers
+wA.scrapeResultPage(url_wohnung_mieten)
+wA.generateDataFrame(immo)
 
-
-wohnungMieten.scrapeResultPage(url_wohnung_mieten)
-wohnungMieten.generateDataFrame()
+# Scrape WG-Gesucht for demands
+# wG.scrapeResultPage(url_wgGesucht_wohnungsGesuche)
+# wG.generateDataFrame(wg)
